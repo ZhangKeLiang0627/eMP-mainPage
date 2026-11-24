@@ -54,6 +54,14 @@ Hidden=false
 Type=Application
 ```
 
+| 字段 | 说明 |
+|---|---|
+| `Name` | 按钮显示名称（必填） |
+| `Exec` | 可执行文件绝对路径 + 可选参数（必填，须通过安全检查） |
+| `Icon` | 图标路径：绝对路径，或相对 mainPage 可执行文件所在目录；留空则按钮无图标 |
+| `Type` | 必须为 `Application` |
+| `Terminal` / `Hidden` / `NoDisplay` | 可选；`Hidden=true` / `NoDisplay=true` 的文件不显示 |
+
 ### 解析规则（desktop_entry.cpp）
 
 | 规则 | 说明 |
