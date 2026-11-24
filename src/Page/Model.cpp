@@ -375,11 +375,9 @@ void Model::runApplication(const char *exec, char *const argv[])
 
     printf("[View] return to mainPage! (exit=%d)\n", result);
 
-    // lv_async_call([](void *data){
-    //     Model *model = (Model *)data;
-    //     model->_view.appearAnimStart(false);}, this);
-
-    _view.appearAnimStart(false); // 触发UI动画
+    /* 返回主界面不重播入场动画：timeline 的 early_apply 会先把画布写成 20x20，
+       动画定时器未及时推进时画布会永久停在 20x20（中间一个点、不可滑动） */
+    // _view.appearAnimStart(false);
 }
 
 /**

@@ -13,6 +13,52 @@ using namespace Page;
 
 // LV_IMG_DECLARE(img_src_bootlogo);
 
+namespace
+{
+/* 应用图标的启动信息：随 lv_obj_t 的 user_data 一起创建与释放 */
+struct AppLaunch
+{
+    char *exec;
+    char **argv;
+};
+
+AppLaunch *appLaunchCreate(const char *exec, char *const argv[])
+{
+    AppLaunch *launch = new AppLaunch{nullptr, nullptr};
+
+    size_t execLen = strlen(exec) + 1;
+    launch->exec = new char[execLen];
+    memcpy(launch->exec, exec, execLen);
+
+    int argc = 0;
+    while (argv != nullptr && argv[argc] != nullptr)
+        argc++;
+
+    launch->argv = new char *[argc + 1];
+    for (int i = 0; i < argc; i++)
+    {
+        size_t len = strlen(argv[i]) + 1;
+        launch->argv[i] = new char[len];
+        memcpy(launch->argv[i], argv[i], len);
+    }
+    launch->argv[argc] = nullptr;
+
+    return launch;
+}
+
+void appLaunchDestroy(AppLaunch *launch)
+{
+    if (launch == nullptr)
+        return;
+
+    for (int i = 0; launch->argv[i] != nullptr; i++)
+        delete[] launch->argv[i];
+    delete[] launch->argv;
+    delete[] launch->exec;
+    delete launch;
+}
+} // namespace
+
 void View::create(void)
 {
     // 画布的创建
@@ -102,12 +148,15 @@ void View::release()
     }
 
     // 释放用户数据
-    lv_obj_t *btn;
-    while ((btn = lv_obj_get_child(ui.btnCont.cont, -1)) != nullptr)
+    if (ui.btnCont.cont != nullptr)
     {
-        char *execFile = (char *)lv_obj_get_user_data(btn);
-
-        delete[] execFile; // 释放保存的app数据
+        while (lv_obj_get_child_cnt(ui.btnCont.cont) > 0)
+        {
+            lv_obj_t *btn = lv_obj_get_child(ui.btnCont.cont, 0);
+            appLaunchDestroy((AppLaunch *)lv_obj_get_user_data(btn));
+            lv_obj_set_user_data(btn, nullptr);
+            lv_obj_del(btn);
+        }
     }
 }
 
@@ -365,15 +414,9 @@ void View::sideTipsPopupCreate(lv_obj_t *obj, const char *tips)
  */
 void View::addApplication(const char *name, const char *exec, char *const argv[], void *icon)
 {
-    // 保存app执行文件名称
-    int len = strlen(exec) + 1;
-    char *execFile = new char[len];
-    strcpy(execFile, exec);
-
     lv_obj_t *btn = btnCreate(ui.btnCont.cont, icon, name);
-    lv_obj_set_user_data(btn, execFile);
-    lv_obj_add_event_cb(btn, applicationEventHandler, LV_EVENT_ALL, this);
-    // ui.btnCont.btn = btn;
+    lv_obj_set_user_data(btn, appLaunchCreate(exec, argv));
+    lv_obj_add_event_cb(btn, applicationEventHandler, LV_EVENT_SHORT_CLICKED, this);
 }
 
 /**
@@ -399,20 +442,19 @@ void View::applicationEventHandler(lv_event_t *event)
     lv_event_code_t code = lv_event_get_code(event);
     lv_obj_t *obj = lv_event_get_current_target(event);
 
-    const char *exec = (const char *)lv_obj_get_user_data(obj);
+    if (code != LV_EVENT_SHORT_CLICKED)
+        return;
 
-    if (code == LV_EVENT_SHORT_CLICKED)
+    AppLaunch *launch = (AppLaunch *)lv_obj_get_user_data(obj);
+    if (launch == nullptr)
+        return;
+
+    printf("[View] clickEventCb, exec: %s\n", launch->exec);
+
+    if (instance->_opts.runAppCb != nullptr)
     {
-        printf("[View] clickEventCb, exec: %s\n", exec);
-
-        if (exec != nullptr)
-        {
-            if (instance->_opts.runAppCb != nullptr)
-            {
-                instance->_opts.runAppCb(exec, nullptr); // 运行应用程序，应用程序退出前阻塞在此
-                lv_obj_invalidate(lv_scr_act());         // 重绘屏幕
-            }
-        }
+        instance->_opts.runAppCb(launch->exec, launch->argv); // 运行应用程序，应用程序退出前阻塞在此
+        lv_obj_invalidate(lv_scr_act());                      // 重绘屏幕
     }
 }
 
