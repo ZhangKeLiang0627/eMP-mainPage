@@ -2,14 +2,6 @@
 
 Allwinner T113-S3 板子的主界面（Launcher），基于 LVGL 8.3 + sunxifb，负责展示 eMP 系列应用入口并跳转。
 
-## 功能
-
-- **应用自动发现**：监听 `/mnt/UDISK/applications/*.desktop`，插 U 盘 / 拷入新应用自动加载按钮（inotify）
-- **应用启动器**：fork + execv 重构（独立进程组 / subreaper / 退出码记录 / 实例锁），跳转更健壮
-- **网络对时**（ARM 编译启用）：板子无 RTC 时自动同步系统时间（WorldTimeAPI → Baidu 回退）
-- **现代 JSON**：`nlohmann/json` 替代旧版 cJSON
-- 网络状态 / 时间日期展示、U 盘图标、HTTP 管理服务（6210 端口）
-
 ## Snapshots
 
 ![](./pictures/image-1.jpg)
